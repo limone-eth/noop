@@ -32,10 +32,10 @@ struct StrandiOSApp: App {
     @AppStorage(ChartStyle.storageKey) private var chartStyleRaw = ChartStyle.titanium.rawValue
 
     init() {
-        // Debug-only canary: trips if the App Group entitlement is missing on this target. Disabled for
-        // the personal-team sideload, which intentionally drops the App Group (+ widget) so a free Apple
-        // ID can sign — the canary would otherwise assert on launch. Re-enable for a paid-account build.
-        // WidgetSnapshot.assertGroupProvisioned()
+        // Debug-only canary: trips if the App Group entitlement is missing on this target before any
+        // silent no-op (PendingIntents, WidgetSnapshot.publish, Live Activity) can mask the issue as
+        // "the widget doesn't show anything yet." No-op in Release.
+        WidgetSnapshot.assertGroupProvisioned()
         // #510: register the scheduled debug auto-export's BGTask handler BEFORE launch finishes — iOS
         // only delivers a background task whose identifier was registered at launch AND listed in the
         // target's BGTaskSchedulerPermittedIdentifiers (project.yml). Without this the overnight drop
