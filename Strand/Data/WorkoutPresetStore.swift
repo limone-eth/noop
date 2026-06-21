@@ -22,6 +22,7 @@ final class WorkoutPresetStore: ObservableObject {
         static let goals = "presets.goals.v1"
         static let seeded = "presets.seeded.v1"
         static let zone2DistanceGoals = "presets.zone2DistanceGoals.v1"
+        static let vo2Migration = "presets.vo2Migration.v1"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -33,6 +34,21 @@ final class WorkoutPresetStore: ObservableObject {
             d.set(true, forKey: K.seeded)
         }
         addZone2DistanceGoalsOnce()
+        migrateToVO2MaxOnce()
+    }
+
+    /// One-time migration: replace the original interval seeds (Tabata / HIIT / EMOM) with the two VO2
+    /// max workouts, and drop the "30 min aerobic" + "Tempo" goal seeds. Targets only those seed ids, so
+    /// any preset the user created is left untouched. Runs once.
+    private func migrateToVO2MaxOnce() {
+        guard !d.bool(forKey: K.vo2Migration) else { return }
+        intervals.removeAll { ["seed.tabata", "seed.hiit", "seed.emom"].contains($0.id) }
+        for p in Self.vo2MaxPresets where !intervals.contains(where: { $0.id == p.id }) {
+            intervals.append(p)
+        }
+        goals.removeAll { ["seed.30min", "seed.tempo"].contains($0.id) }
+        persistIntervals(); persistGoals()
+        d.set(true, forKey: K.vo2Migration)
     }
 
     /// One-time migration that adds the 10 km and 7 km Zone-2 goal presets to existing installs (the
@@ -90,30 +106,27 @@ final class WorkoutPresetStore: ObservableObject {
     /// re-seed (only ever runs once) can't duplicate them. Zone targets use the conventional bands.
     private func seedDefaults() {
         if intervals.isEmpty {
-            intervals = [
-                IntervalPreset(id: "seed.tabata", name: "Tabata", prepareSec: 10, workSec: 20,
-                               restSec: 10, rounds: 8, cycles: 1, restBetweenCyclesSec: 0,
-                               targetZoneLow: 4, targetZoneHigh: 5),
-                IntervalPreset(id: "seed.hiit", name: "HIIT 4×4", prepareSec: 15, workSec: 240,
-                               restSec: 180, rounds: 4, cycles: 1, restBetweenCyclesSec: 0,
-                               targetZoneLow: 4, targetZoneHigh: 4),
-                IntervalPreset(id: "seed.emom", name: "EMOM 10", prepareSec: 10, workSec: 40,
-                               restSec: 20, rounds: 10, cycles: 1, restBetweenCyclesSec: 0,
-                               targetZoneLow: 3, targetZoneHigh: 4),
-            ]
+            intervals = Self.vo2MaxPresets
             persistIntervals()
         }
         if goals.isEmpty {
             goals = [
                 GoalPreset(id: "seed.5k", name: "5K easy (Zone 2)", sport: "Running",
                            goal: .distance(5000), targetZoneLow: 2, targetZoneHigh: 2),
-                GoalPreset(id: "seed.30min", name: "30 min aerobic (Zone 3)", sport: "Running",
-                           goal: .duration(1800), targetZoneLow: 3, targetZoneHigh: 3),
-                GoalPreset(id: "seed.tempo", name: "Tempo 5–5:30 /km", sport: "Running",
-                           goal: .distance(8000), targetZoneLow: 0, targetZoneHigh: 0,
-                           paceRange: PaceRange(fastSecPerKm: 300, slowSecPerKm: 330)),
             ]
             persistGoals()
         }
     }
+
+    /// The two VO2 max interval workouts (Zone 4–5):
+    ///   • VO2 max 1 — 4 min work / 4 min recovery × 5 rounds
+    ///   • VO2 max 2 — 3 min work / 3 min recovery × 6 rounds
+    static let vo2MaxPresets: [IntervalPreset] = [
+        IntervalPreset(id: "builtin.vo2.1", name: "VO2 max 1", prepareSec: 10, workSec: 240,
+                       restSec: 240, rounds: 5, cycles: 1, restBetweenCyclesSec: 0,
+                       targetZoneLow: 4, targetZoneHigh: 5),
+        IntervalPreset(id: "builtin.vo2.2", name: "VO2 max 2", prepareSec: 10, workSec: 180,
+                       restSec: 180, rounds: 6, cycles: 1, restBetweenCyclesSec: 0,
+                       targetZoneLow: 4, targetZoneHigh: 5),
+    ]
 }
