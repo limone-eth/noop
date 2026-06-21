@@ -227,6 +227,7 @@ struct RootTabView: View {
                     MoreRow("Stress", "bolt.heart.fill") { StressView() }
                     MoreRow("Breathe", "wind") { BreathingView() }
                     MoreRow("Intervals", "timer") { IntervalTimerView() }
+                    MoreRow("Workout Presets", "figure.run.circle") { WorkoutPresetsView() }
                     // Experimental beat-to-beat regularity visualization — self-gates on its own consent.
                     MoreRow("Rhythm", "waveform.path") { RhythmHost() }
                 }

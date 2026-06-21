@@ -94,3 +94,6 @@ __pycache__/
 
 # Local release artifacts (zips/ipas built for upload; never tracked)
 dist/
+
+# Local iOS simulator build output
+build-ios/
