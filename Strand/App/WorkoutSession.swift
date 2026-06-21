@@ -155,6 +155,12 @@ final class WorkoutSession: ObservableObject {
         if zoneMonitor.isArmed, bpm != nil, let a = zoneMonitor.evaluate(zone: currentZone, at: elapsed) {
             fireDrift(above: a == .above)
         }
+        // Soft 3-2-1 countdown in the final seconds of the segment — sound-only (no buzz/haptic), gated
+        // on the alert-sound setting. remainingInStep is 0 once finished, so this never collides with the
+        // transition cue.
+        if (1...3).contains(p.remainingInStep), behavior?.zoneAlertSound == true {
+            AlertSound.play(.tick)
+        }
         if progress.finished { finish() }
     }
 
