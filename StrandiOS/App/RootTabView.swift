@@ -10,6 +10,8 @@ struct RootTabView: View {
     /// Cross-screen navigation requests (e.g. Live → "Manage devices"). Devices isn't a tab — it lives
     /// behind the More list — so a request presents it as a sheet, matching the quick-action screens.
     @EnvironmentObject private var router: NavRouter
+    /// The persistent active-workout controller — drives the mini bar + the full-screen cover.
+    @EnvironmentObject private var session: WorkoutSession
 
     /// Which quick-action screen the centre FAB is presenting (nil = sheet closed).
     @State private var quickAction: QuickAction?
@@ -56,9 +58,32 @@ struct RootTabView: View {
             // easing cubic-bezier(0.22,1,0.36,1).
             .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.24), value: selectedTab)
 
-            FloatingTabBar(selection: $selectedTab)
+            VStack(spacing: 8) {
+                if session.isActive && !session.presented {
+                    WorkoutMiniBar()
+                        .padding(.horizontal, 16)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                FloatingTabBar(selection: $selectedTab)
+            }
+            .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.28), value: session.isActive)
+            .animation(.timingCurve(0.22, 1, 0.36, 1, duration: 0.28), value: session.presented)
         }
         .task { await repo.refresh() }
+        // The active workout's full screen — a cover so it floats over the tabs; minimizing drops back
+        // to the mini bar (the session keeps running either way, until Stop).
+        .fullScreenCover(isPresented: Binding(get: { session.presented },
+                                              set: { session.presented = $0 })) {
+            ActiveWorkoutView()
+        }
+        // Root-level so the iPhone haptic cue fires even when the full screen is minimized.
+        .sensoryFeedback(trigger: session.hapticTick) { _, _ in
+            switch session.lastHaptic {
+            case .transition: return .impact(weight: .heavy)
+            case .drift:      return .warning
+            case .done:       return .success
+            }
+        }
         // Quick-action sheet presents with the calm easing (~0.42s) per the README sheet spec —
         // the easing is applied where `quickAction` is set (see `presentQuickAction`), keeping the
         // animation scoped to the sheet rather than the whole shell.
@@ -149,12 +174,14 @@ struct RootTabView: View {
                     withAnimation(Self.sheetEase) { quickAction = picked }
                 }
             }
-            .presentationDetents([.height(344)])
+            .presentationDetents([.height(408)])
             .presentationDragIndicator(.hidden)
         case .live:
             quickScreen(LiveView())
         case .workout:
             quickScreen(WorkoutsView())
+        case .presets:
+            quickScreen(WorkoutPresetsView())
         case .journal:
             quickScreen(InsightsView())
         case .breathe:
@@ -339,7 +366,7 @@ private struct MoreRow<Destination: View>: View {
 /// The destinations the centre FAB can present. `.menu` is the action sheet itself; the rest
 /// route to existing screens. `Identifiable` so it drives `.sheet(item:)`.
 private enum QuickAction: Int, Identifiable {
-    case menu, live, workout, journal, breathe
+    case menu, live, workout, journal, breathe, presets
     var id: Int { rawValue }
 }
 
@@ -369,6 +396,7 @@ private struct QuickActionSheet: View {
             VStack(spacing: 8) {
                 row("Live HR", icon: "waveform.path.ecg", tint: StrandPalette.metricRose) { onPick(.live) }
                 row("Start workout", icon: "figure.run", tint: StrandPalette.effortColor) { onPick(.workout) }
+                row("Workout Presets", icon: "figure.run.circle", tint: StrandPalette.effortColor) { onPick(.presets) }
                 row("Log journal", icon: "square.and.pencil", tint: StrandPalette.accent) { onPick(.journal) }
                 row("Breathe", icon: "wind", tint: StrandPalette.restColor) { onPick(.breathe) }
             }

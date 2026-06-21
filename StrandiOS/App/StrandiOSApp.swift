@@ -18,6 +18,9 @@ struct StrandiOSApp: App {
     @StateObject private var health: HealthKitBridge
     /// Saveable workout presets (interval + goal) for the planned-workout / zone-alert feature.
     @StateObject private var presets = WorkoutPresetStore()
+    /// The persistent active-workout controller (keeps a session running across navigation; drives the
+    /// mini "now playing" bar). Configured with the app objects in init.
+    @StateObject private var session: WorkoutSession
     /// Shared cross-screen navigation hook (e.g. Live → Devices). The iOS shell (`RootTabView`)
     /// observes it and presents the Devices manager.
     @StateObject private var router = NavRouter()
@@ -29,10 +32,10 @@ struct StrandiOSApp: App {
     @AppStorage(ChartStyle.storageKey) private var chartStyleRaw = ChartStyle.titanium.rawValue
 
     init() {
-        // Debug-only canary: trips if the App Group entitlement is missing on this target before any
-        // silent no-op (PendingIntents, WidgetSnapshot.publish, Live Activity) can mask the issue as
-        // "the widget doesn't show anything yet." No-op in Release.
-        WidgetSnapshot.assertGroupProvisioned()
+        // Debug-only canary: trips if the App Group entitlement is missing on this target. Disabled for
+        // the personal-team sideload, which intentionally drops the App Group (+ widget) so a free Apple
+        // ID can sign — the canary would otherwise assert on launch. Re-enable for a paid-account build.
+        // WidgetSnapshot.assertGroupProvisioned()
         // #510: register the scheduled debug auto-export's BGTask handler BEFORE launch finishes — iOS
         // only delivers a background task whose identifier was registered at launch AND listed in the
         // target's BGTaskSchedulerPermittedIdentifiers (project.yml). Without this the overnight drop
@@ -40,6 +43,9 @@ struct StrandiOSApp: App {
         ScheduledDebugExport.register()
         let model = AppModel()
         _model = StateObject(wrappedValue: model)
+        let session = WorkoutSession()
+        session.configure(model: model, behavior: model.behavior)
+        _session = StateObject(wrappedValue: session)
         _health = StateObject(wrappedValue: HealthKitBridge(
             repo: model.repo,
             appleDeviceId: model.appleDeviceId,
@@ -56,6 +62,7 @@ struct StrandiOSApp: App {
                 .environmentObject(model.profile)
                 .environmentObject(model.behavior)
                 .environmentObject(presets)
+                .environmentObject(session)
                 .environmentObject(model.intelligence)
                 .environmentObject(model.coach)
                 .environmentObject(health)
@@ -216,10 +223,8 @@ enum DemoScreens {
         case "stress":   return AnyView(StressView())
         case "workouts": return AnyView(WorkoutsView())
         case "presets":  return AnyView(WorkoutPresetsView())
-        case "planned":  return AnyView(PlannedWorkoutView(preset:
-            IntervalPreset(id: "demo.tabata", name: "Tabata", prepareSec: 10, workSec: 20, restSec: 10,
-                           rounds: 8, cycles: 1, restBetweenCyclesSec: 0,
-                           targetZoneLow: 4, targetZoneHigh: 5)))
+        case "goal":     return AnyView(DemoActiveWorkout(kind: .goal))
+        case "planned":  return AnyView(DemoActiveWorkout(kind: .interval))
         case "health":   return AnyView(HealthView())
         case "insights": return AnyView(InsightsView())
         case "explore":  return AnyView(MetricExplorerView())
@@ -244,5 +249,27 @@ enum DemoScreens {
 private struct AddWizardDemoHost: View {
     @EnvironmentObject var live: LiveState
     var body: some View { AddDeviceWizard(live: live, onClose: {}) }
+}
+
+/// DEBUG-only host that starts a simulated session and renders the live ActiveWorkoutView for
+/// deterministic screenshots (`--demo-screen planned|goal`, optionally `--demo-run`).
+private struct DemoActiveWorkout: View {
+    enum Kind { case interval, goal }
+    let kind: Kind
+    @EnvironmentObject private var session: WorkoutSession
+    var body: some View {
+        ActiveWorkoutView().onAppear {
+            session.simulate = true
+            switch kind {
+            case .interval:
+                session.startInterval(IntervalPreset(id: "demo.tabata", name: "Tabata", prepareSec: 10,
+                    workSec: 20, restSec: 10, rounds: 8, cycles: 1, restBetweenCyclesSec: 0,
+                    targetZoneLow: 4, targetZoneHigh: 5))
+            case .goal:
+                session.startGoal(GoalPreset(id: "demo.5k", name: "5K easy (Zone 2)", sport: "Running",
+                    goal: .distance(5000), targetZoneLow: 2, targetZoneHigh: 2))
+            }
+        }
+    }
 }
 #endif

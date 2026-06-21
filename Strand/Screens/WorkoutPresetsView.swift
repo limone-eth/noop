@@ -10,6 +10,7 @@ import StrandAnalytics
 // `StrandAnalytics` and shown read-only here pending their own live screen.
 struct WorkoutPresetsView: View {
     @EnvironmentObject private var presets: WorkoutPresetStore
+    @EnvironmentObject private var session: WorkoutSession
     @State private var editing: IntervalPreset?
     @State private var creatingNew = false
 
@@ -38,7 +39,7 @@ struct WorkoutPresetsView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("INTERVALS").strandOverline()
             ForEach(presets.intervals) { p in
-                NavigationLink { PlannedWorkoutView(preset: p) } label: { intervalRow(p) }
+                Button { session.startInterval(p) } label: { intervalRow(p) }
                     .buttonStyle(.plain)
                     .contextMenu {
                         Button("Edit") { editing = p }
@@ -87,7 +88,7 @@ struct WorkoutPresetsView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("GOALS").strandOverline()
             ForEach(presets.goals) { g in
-                NavigationLink { GoalWorkoutView(preset: g) } label: {
+                Button { session.startGoal(g) } label: {
                     NoopCard {
                         HStack(spacing: 14) {
                             Image(systemName: "flag.checkered")
