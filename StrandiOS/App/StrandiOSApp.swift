@@ -1,6 +1,7 @@
 #if os(iOS)
 import SwiftUI
 import StrandDesign
+import StrandAnalytics
 
 /// iOS entry point. Unlike the macOS app (which adds a `MenuBarExtra` scene), iOS uses a single
 /// `WindowGroup`; the glanceable menu-bar role is filled by the Home/Lock-Screen widget instead.
@@ -15,6 +16,8 @@ import StrandDesign
 struct StrandiOSApp: App {
     @StateObject private var model: AppModel
     @StateObject private var health: HealthKitBridge
+    /// Saveable workout presets (interval + goal) for the planned-workout / zone-alert feature.
+    @StateObject private var presets = WorkoutPresetStore()
     /// Shared cross-screen navigation hook (e.g. Live → Devices). The iOS shell (`RootTabView`)
     /// observes it and presents the Devices manager.
     @StateObject private var router = NavRouter()
@@ -52,6 +55,7 @@ struct StrandiOSApp: App {
                 .environmentObject(model.repo)
                 .environmentObject(model.profile)
                 .environmentObject(model.behavior)
+                .environmentObject(presets)
                 .environmentObject(model.intelligence)
                 .environmentObject(model.coach)
                 .environmentObject(health)
@@ -211,6 +215,11 @@ enum DemoScreens {
         case "live":     return AnyView(LiveView())
         case "stress":   return AnyView(StressView())
         case "workouts": return AnyView(WorkoutsView())
+        case "presets":  return AnyView(WorkoutPresetsView())
+        case "planned":  return AnyView(PlannedWorkoutView(preset:
+            IntervalPreset(id: "demo.tabata", name: "Tabata", prepareSec: 10, workSec: 20, restSec: 10,
+                           rounds: 8, cycles: 1, restBetweenCyclesSec: 0,
+                           targetZoneLow: 4, targetZoneHigh: 5)))
         case "health":   return AnyView(HealthView())
         case "insights": return AnyView(InsightsView())
         case "explore":  return AnyView(MetricExplorerView())

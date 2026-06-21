@@ -21,6 +21,12 @@ final class BehaviorStore: ObservableObject {
 
     // MARK: HR-zone haptic coaching (during a live session)
     @Published var zoneCoaching: Bool { didSet { d.set(zoneCoaching, forKey: K.zoneCoaching) } }
+
+    // MARK: Planned-workout zone/interval alerts (PlannedWorkoutView)
+    /// Play a phone tone + vibration on interval transitions and HR-zone drift. Default ON.
+    @Published var zoneAlertSound: Bool { didSet { d.set(zoneAlertSound, forKey: K.zoneAlertSound) } }
+    /// Buzz the strap (when bonded) on interval transitions and HR-zone drift. Default ON.
+    @Published var zoneAlertBuzz: Bool { didSet { d.set(zoneAlertBuzz, forKey: K.zoneAlertBuzz) } }
     /// Experimental: gentle buzz when a resting stress spike is detected (HRV drops while HR is calm).
     @Published var stressNudge: Bool { didSet { d.set(stressNudge, forKey: K.stress) } }
 
@@ -59,6 +65,8 @@ final class BehaviorStore: ObservableObject {
         static let wristOffShortcut = "behavior.wristOffShortcut"
         static let wristOnShortcut = "behavior.wristOnShortcut"
         static let zoneCoaching = "behavior.zoneCoaching"
+        static let zoneAlertSound = "behavior.zoneAlertSound"
+        static let zoneAlertBuzz = "behavior.zoneAlertBuzz"
         static let stress = "behavior.stressNudge"
         // Haptic biofeedback L3 — keys MATCH BiofeedbackPrefs (one source of truth, two readers).
         static let stressCheckIn = "biofeedback.stressCheckIn"
@@ -82,6 +90,8 @@ final class BehaviorStore: ObservableObject {
         wristOffShortcut = d.string(forKey: K.wristOffShortcut) ?? ""
         wristOnShortcut = d.string(forKey: K.wristOnShortcut) ?? ""
         zoneCoaching = d.object(forKey: K.zoneCoaching) as? Bool ?? false
+        zoneAlertSound = d.object(forKey: K.zoneAlertSound) as? Bool ?? true
+        zoneAlertBuzz = d.object(forKey: K.zoneAlertBuzz) as? Bool ?? true
         stressNudge = d.object(forKey: K.stress) as? Bool ?? false
         stressCheckIn = d.object(forKey: K.stressCheckIn) as? Bool ?? false
         stressAutoNudge = d.object(forKey: K.stressAutoNudge) as? Bool ?? false
