@@ -87,21 +87,25 @@ struct WorkoutPresetsView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("GOALS").strandOverline()
             ForEach(presets.goals) { g in
-                NoopCard {
-                    HStack(spacing: 14) {
-                        Image(systemName: "flag.checkered")
-                            .font(.system(size: 20)).foregroundStyle(StrandPalette.accent).frame(width: 30)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(g.name).font(StrandFont.headline).foregroundStyle(StrandPalette.textPrimary)
-                            Text(goalSummary(g)).font(StrandFont.footnote)
-                                .foregroundStyle(StrandPalette.textSecondary)
+                NavigationLink { GoalWorkoutView(preset: g) } label: {
+                    NoopCard {
+                        HStack(spacing: 14) {
+                            Image(systemName: "flag.checkered")
+                                .font(.system(size: 20)).foregroundStyle(StrandPalette.accent).frame(width: 30)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(g.name).font(StrandFont.headline).foregroundStyle(StrandPalette.textPrimary)
+                                Text(goalSummary(g)).font(StrandFont.footnote)
+                                    .foregroundStyle(StrandPalette.textSecondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(StrandPalette.textTertiary)
                         }
-                        Spacer()
                     }
                 }
+                .buttonStyle(.plain)
+                .contextMenu { Button("Delete", role: .destructive) { presets.deleteGoal(id: g.id) } }
             }
-            Text("Goal workouts (time/distance held in a zone or pace band) are coming to a live GPS screen next.")
-                .font(StrandFont.footnote).foregroundStyle(StrandPalette.textTertiary)
         }
     }
 

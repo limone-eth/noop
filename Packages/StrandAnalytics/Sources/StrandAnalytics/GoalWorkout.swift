@@ -59,6 +59,12 @@ public struct GoalPreset: Codable, Equatable, Sendable, Identifiable {
     public var hasHRTarget: Bool { targetZoneLow >= 1 && targetZoneHigh >= 1 }
     public var hasPaceTarget: Bool { paceRange != nil }
 
+    /// True when live GPS is required to evaluate the goal (a distance goal or a pace band).
+    public var needsGps: Bool {
+        if case .distance = goal { return true }
+        return paceRange != nil
+    }
+
     /// Fraction of the goal completed (0...1), or nil for an `.open` goal (no finish line).
     public func fractionComplete(elapsedSec: Double, distanceM: Double) -> Double? {
         switch goal {
