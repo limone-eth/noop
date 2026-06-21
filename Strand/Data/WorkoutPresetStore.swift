@@ -21,6 +21,7 @@ final class WorkoutPresetStore: ObservableObject {
         static let intervals = "presets.intervals.v1"
         static let goals = "presets.goals.v1"
         static let seeded = "presets.seeded.v1"
+        static let zone2DistanceGoals = "presets.zone2DistanceGoals.v1"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -31,6 +32,26 @@ final class WorkoutPresetStore: ObservableObject {
             seedDefaults()
             d.set(true, forKey: K.seeded)
         }
+        addZone2DistanceGoalsOnce()
+    }
+
+    /// One-time migration that adds the 10 km and 7 km Zone-2 goal presets to existing installs (the
+    /// initial seed already ran, so they wouldn't otherwise appear). Idempotent + respects deletion: it
+    /// runs once, only inserting ids that aren't already present.
+    private func addZone2DistanceGoalsOnce() {
+        guard !d.bool(forKey: K.zone2DistanceGoals) else { return }
+        let builtins = [
+            GoalPreset(id: "builtin.10k.z2", name: "10 km · Zone 2", sport: "Running",
+                       goal: .distance(10_000), targetZoneLow: 2, targetZoneHigh: 2),
+            GoalPreset(id: "builtin.7k.z2", name: "7 km · Zone 2", sport: "Running",
+                       goal: .distance(7_000), targetZoneLow: 2, targetZoneHigh: 2),
+        ]
+        var changed = false
+        for b in builtins where !goals.contains(where: { $0.id == b.id }) {
+            goals.append(b); changed = true
+        }
+        if changed { persistGoals() }
+        d.set(true, forKey: K.zone2DistanceGoals)
     }
 
     // MARK: - Mutators (each persists immediately)
