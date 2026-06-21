@@ -24,14 +24,17 @@ enum AlertSound {
         case work           // interval entered a WORK block
         case rest           // interval entered a REST block
         case finished       // whole workout complete
+        case tick           // soft 3-2-1 countdown tick before a phase switch
     }
 
-    /// Play the cue's tone + device vibration. Safe to call from the main actor each transition.
+    /// Play the cue's tone (+ device vibration, except the soft countdown tick which is sound-only).
+    /// Safe to call from the main actor each transition.
     static func play(_ cue: Cue) {
         #if os(iOS)
         AudioServicesPlaySystemSound(systemSoundID(for: cue))
-        // A matching Taptic cue so it's felt as well as heard (silent-switch friendly).
-        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        // A matching Taptic cue so it's felt as well as heard (silent-switch friendly) — but the 3-2-1
+        // countdown tick is deliberately sound-only.
+        if cue != .tick { AudioServicesPlaySystemSound(kSystemSoundID_Vibrate) }
         #endif
     }
 
@@ -47,6 +50,7 @@ enum AlertSound {
         case .work:         return 1057   // "Tock" — crisp start-of-work
         case .rest:         return 1103   // "begin record" — softer rest cue
         case .finished:     return 1025   // "fanfare"-ish completion
+        case .tick:         return 1104   // soft keyboard "Tock" — quiet 3-2-1 countdown
         }
     }
     #endif
